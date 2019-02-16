@@ -1,1 +1,4 @@
+import SystemFlg
+
+
 class Bot:

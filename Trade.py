@@ -1,4 +1,5 @@
 import ccxt
+from Account import Account
 
 
 class Trade:
