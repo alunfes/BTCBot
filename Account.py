@@ -48,7 +48,7 @@ class Account:
         with cls.lock:
             cls.order_side.append(side)
             cls.order_price.append(price)
-            cls.order_size.append(size)
+            cls.order_size.append(round(size,2))
             cls.order_dt.append(dt)
             cls.order_expire_dt.append(expire_dt)
             cls.order_status.append('ordering')
@@ -89,6 +89,7 @@ class Account:
     @classmethod
     def main_loop(cls):
         while SystemFlg.get_system_flg():
+            print('')
 
     @classmethod
     def __check_execution(cls):
@@ -116,6 +117,10 @@ class Account:
             cls.__update_position(order_side, ave_p, sum_size, order_id)
 
     @classmethod
+    def get_executions(cls):
+        cls.bf.
+
+    @classmethod
     def __update_position(cls,side,price,size,dt,id):
         if cls.ave_position_side == 'None':
             cls.add_position(side, price, size, dt, id)
@@ -140,5 +145,5 @@ class Account:
         with cls.lock:
             for i,status in enumerate(cls.order_status):
                 if status == 'cancelling':
-                    if 
+                    print('')
 

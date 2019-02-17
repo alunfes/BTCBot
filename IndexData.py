@@ -1,6 +1,6 @@
 import threading
 import time
-from BTCData import BTCData
+import BTCData
 from SystemFlg import SystemFlg
 
 
@@ -41,7 +41,7 @@ class IndexData:
     def main_loop(cls):
         flg = True
         while flg: #loop for waiting enough num of tick data
-            data = BTCData.get_exes_for_db()
+            data = BTCData.BTCData.get_exes_for_db()
             if len(data) > cls.term:
                 flg = False
             else:
@@ -49,7 +49,7 @@ class IndexData:
 
         pre_num = 0
         num = 0
-        data = BTCData.get_exes_for_db()['price']
+        data = BTCData.BTCData.get_exes_for_db()['price']
         sum = data.loc[len(data) - cls.term - 1 : len(data) -1].sum()
         pre_num = len(data)
         while SystemFlg.get_system_flg(): #loop for calc of ma and kairi
@@ -58,4 +58,4 @@ class IndexData:
             ma = float(sum) / float(cls.term)
             cls.set_ma(ma)
             cls.set_ma_kairi(data.iloc[len(data) - 1] / ma)
-            data = BTCData.get_exes_for_db()['price']
+            data = BTCData.BTCData.get_exes_for_db()['price']

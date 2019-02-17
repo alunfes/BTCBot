@@ -1,12 +1,10 @@
 import websocket
 import threading
 import time
-import datetime
 import json
 from BTCData import BTCData
 import pandas as pd
 import asyncio
-
 
 class MarketData:
     def __init__(self, channel, symbol):
@@ -22,7 +20,7 @@ class MarketData:
             'wss://ws.lightstream.bitflyer.com/json-rpc', header=None,
             on_open = self.on_open, on_message = self.on_message,
             on_error = self.on_error, on_close = self.on_close)
-        self.ws.keep_running = True
+        self.ws.keep_running = True 
         websocket.enableTrace(True)
         self.thread = threading.Thread(target=lambda: self.ws.run_forever())
         self.thread.daemon = True
@@ -42,12 +40,8 @@ class MarketData:
     def on_message(self, ws, message):
         message = json.loads(message)['params']
         self.ticker = message['message']
-        if self.channel == 'lightning_executions_':
-            if self.ticker is not None:
-                print(str(self.ticker[0]['price']) +' - ' + str(datetime.datetime.now()))
-                #BTCData.add_execution_data(self.ticker) #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
-        elif self.channel == 'lightning_ticker_':
-            print(message['message']['ltp'])
+        if self.ticker is not None:
+            BTCData.add_execution_data(self.ticker) #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
 
     def on_error(self, ws, error):
         print('error')
@@ -70,8 +64,8 @@ class MarketData:
 
 
 if __name__ == '__main__':
+
     md = MarketData('lightning_executions_','FX_BTC_JPY')
-    #md = MarketData('lightning_ticker_', 'FX_BTC_JPY')
     num_failed = 0
     loop = asyncio.get_event_loop()
     asyncio.ensure_future(md.loop())
