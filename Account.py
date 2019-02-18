@@ -6,9 +6,8 @@ import pandas as pd
 
 class Account:
     @classmethod
-    def initialize(cls, ccxt_bf):
-        cls.lock = threading.Lock()
-        cls.bf = ccxt_bf
+    def initialize(cls):
+        cls.lock = threading.Lock()f
 
         cls.order_side = []
         cls.order_id = []
@@ -17,6 +16,8 @@ class Account:
         cls.order_dt = []
         cls.order_expire_dt = []
         cls.order_status = [] #ordering, cancelling
+        cls.order_memo = [] #memo for info used in Bot, pt, lc, entry
+        cls.order_log = {} #id, status
 
         '''
         cls.position_price = []
@@ -37,6 +38,7 @@ class Account:
         cls.total_pl_log = []
         cls.win_ratio = 0
         cls.num_win = 0
+        cls.unrealized_pl = 0
 
     @classmethod
     def get_orders(cls):
@@ -44,7 +46,7 @@ class Account:
             return {'order_side':cls.order_side, 'order_id':cls.order_id, 'order_price':cls.order_price, 'order_size':cls.order_size,
                     'order_dt':cls.order_dt, 'order_expire_dt':cls.order_expire_dt, 'order_status':cls.order_status}
     @classmethod
-    def add_order(cls, side, price, size, dt, expire_dt):
+    def add_order(cls, oid, side, price, size, dt, expire_dt, memo):
         with cls.lock:
             cls.order_side.append(side)
             cls.order_price.append(price)
@@ -52,6 +54,8 @@ class Account:
             cls.order_dt.append(dt)
             cls.order_expire_dt.append(expire_dt)
             cls.order_status.append('ordering')
+            cls.order_memo.append(memo)
+            cls.order_log[oid] = 'ordering'
 
     @classmethod
     def __remove_order(cls, ind):
@@ -63,12 +67,17 @@ class Account:
             cls.order_dt.pop(ind)
             cls.order_price.pop(ind)
             cls.order_size.pop(ind)
+            cls.order_memo.pop(ind)
 
     @classmethod
     def cancel_order(cls, ind, dt):
         with cls.lock:
             cls.order_status[ind] = 'cancelling'
             cls.order_dt[ind] = dt
+
+    @classmethod
+    def get_positions(cls):
+        return {'ave_position_side':cls.ave_position_side, 'ave_position_price':cls.ave_position_price, 'ave_position_size':cls.ave_position_size}
 
     '''
     @classmethod
@@ -89,7 +98,9 @@ class Account:
     @classmethod
     def main_loop(cls):
         while SystemFlg.get_system_flg():
-            print('')
+            cls.__check_execution()
+            cls.__check_order_cancellation()
+            cls.__calc_pl_unrealized()
 
     @classmethod
     def __check_execution(cls):
@@ -117,8 +128,32 @@ class Account:
             cls.__update_position(order_side, ave_p, sum_size, order_id)
 
     @classmethod
+    def __calc_pl_exec(cls, side, price, size):
+        pre = cls.total_pl
+        pl = 0
+        if cls.ave_position_side == 'buy' and side == 'sell':
+            pl = (price - cls.ave_position_price) * size
+        elif cls.ave_position_side == 'sell' and side == 'buy':
+            pl =(cls.ave_position_price - price) * size
+        cls.total_pl_log.append(pl - pre)
+        cls.total_pl +=pl
+        cls.num_win += 1 if pl >0 else 0
+        cls.win_ratio = float(cls.num_win) / float(cls.num_trade)
+
+
+    @classmethod
+    def __calc_pl_unrealized(cls):
+        price = BTCData.get_latest_exes_for_db()['price']
+        if cls.ave_position_side == 'buy':
+            cls.unrealized_pl = (price - cls.ave_position_price) * cls.ave_position_size
+        elif cls.ave_position_side == 'sell':
+            cls.unrealized_pl = (cls.ave_position_price - price) * cls.ave_position_size
+        else:
+            cls.unrealized_pl = 0
+
+    @classmethod
     def get_executions(cls):
-        cls.bf.
+        print('')
 
     @classmethod
     def __update_position(cls,side,price,size,dt,id):
@@ -128,6 +163,7 @@ class Account:
             cls.ave_position_price = (cls.ave_position_price * cls.ave_position_size + price * size) / (cls.ave_position_size + size)
             cls.ave_position_size += size
         elif cls.ave_position_side != side:
+            cls.__calc_pl_exec(side, price, size)
             if cls.ave_position_size > size:
                 cls.ave_position_size -= size
             elif cls.ave_position_size == size:

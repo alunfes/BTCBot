@@ -43,6 +43,11 @@ class BTCData:
         return cls.exes_for_db
 
     @classmethod
+    def get_latest_exes_for_db(cls):
+        with cls.lock_db:
+            return cls.exes_for_db[len(cls.exes_for_db)-1]
+
+    @classmethod
     def dt_converter(cls, dt):
         utc_split = datetime(
             year = int(dt[0:4]), month = int(dt[5:7]), day = int(dt[8:10]),
