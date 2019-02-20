@@ -1,13 +1,15 @@
 from BTCData import BTCData
 from SystemFlg import SystemFlg
+import Trade
 import threading
 import pandas as pd
+import time
 
 
 class Account:
     @classmethod
     def initialize(cls):
-        cls.lock = threading.Lock()f
+        cls.lock = threading.Lock()
 
         cls.order_side = []
         cls.order_id = []
@@ -18,13 +20,6 @@ class Account:
         cls.order_status = [] #ordering, cancelling
         cls.order_memo = [] #memo for info used in Bot, pt, lc, entry
         cls.order_log = {} #id, status
-
-        '''
-        cls.position_price = []
-        cls.position_size = []
-        cls.position_dt = []
-        cls.position_id = []
-        '''
 
         cls.ave_position_side = 'None' #buy, sell
         cls.ave_position_price = 0
@@ -45,6 +40,12 @@ class Account:
         with cls.lock:
             return {'order_side':cls.order_side, 'order_id':cls.order_id, 'order_price':cls.order_price, 'order_size':cls.order_size,
                     'order_dt':cls.order_dt, 'order_expire_dt':cls.order_expire_dt, 'order_status':cls.order_status}
+
+    @classmethod
+    def get_order_status(cls, oid):
+        with cls.lock:
+            return cls.order_log[oid]
+
     @classmethod
     def add_order(cls, oid, side, price, size, dt, expire_dt, memo):
         with cls.lock:
@@ -70,37 +71,47 @@ class Account:
             cls.order_memo.pop(ind)
 
     @classmethod
-    def cancel_order(cls, ind, dt):
+    def cancel_order(cls, oid, dt):
         with cls.lock:
-            cls.order_status[ind] = 'cancelling'
-            cls.order_dt[ind] = dt
+            ind = -1
+            try:
+                ind = cls.order_id.index(oid)
+            except:
+                ind = -1
+            finally:
+                if ind > -1:
+                    cls.order_status[ind] = 'cancelling'
+                    cls.order_dt[ind] = dt
+                    cls.order_log[oid] = 'cancelling'
+                else:
+                    print('unknown order id in Account.cancel_order!')
 
     @classmethod
     def get_positions(cls):
         return {'ave_position_side':cls.ave_position_side, 'ave_position_price':cls.ave_position_price, 'ave_position_size':cls.ave_position_size}
 
-    '''
-    @classmethod
-    def __check_order_expiration(cls):
-
-
-    @classmethod
-    def add_position(cls, side, price, size, dt, id):
-        with cls.lock:
-    '''
 
     @classmethod
     def start(cls, ccxt_bf):
         cls.initialize(ccxt_bf)
-        th = threading.Thread(target = cls.main_loop)
+        th = threading.Thread(target = cls.__main_loop)
+        th2 = threading.Thread(target=cls.__check_order_loop())
         th.start()
+        th2.start()
+
 
     @classmethod
-    def main_loop(cls):
+    def __main_loop(cls):
         while SystemFlg.get_system_flg():
             cls.__check_execution()
-            cls.__check_order_cancellation()
             cls.__calc_pl_unrealized()
+
+    @classmethod
+    def __check_order_loop(cls):
+        while SystemFlg.get_system_flg():
+            cls.__check_order_activation()
+            cls.__check_order_cancellation()
+            time.sleep(1)
 
     @classmethod
     def __check_execution(cls):
@@ -122,9 +133,15 @@ class Account:
         sum_size = exe_df['size'].sum()
         ndf = exe_df['price'] * exe_df['size']
         ave_p = ndf.sum() / float(len(ndf))
-        print('executed ' + order_side + ' ' + str(ave_p) + ' x ' + str(sum_size))
-        cls.__remove_order(order_ind)
-        if cls.ave_position_side == 'None':
+        with cls.lock:
+            cls.order_size[order_ind] -= sum_siz
+            cls.order_log[order_id] = 'ridden'
+            print('executed ' + order_side + ' ' + str(ave_p) + ' x ' + str(sum_size))
+            if sum_size >= cls.order_size[order_ind]:
+                cls.__remove_order(order_ind)
+                cls.order_log[order_id] = 'executed'
+                cls.num_trade +=1
+                print('order' + order_id + ' has been fully executed')
             cls.__update_position(order_side, ave_p, sum_size, order_id)
 
     @classmethod
@@ -151,14 +168,13 @@ class Account:
         else:
             cls.unrealized_pl = 0
 
-    @classmethod
-    def get_executions(cls):
-        print('')
 
     @classmethod
     def __update_position(cls,side,price,size,dt,id):
         if cls.ave_position_side == 'None':
-            cls.add_position(side, price, size, dt, id)
+            cls.ave_position_side = side
+            cls.ave_position_price = price
+            cls.ave_position_size = size
         elif cls.ave_position_side == side:
             cls.ave_position_price = (cls.ave_position_price * cls.ave_position_size + price * size) / (cls.ave_position_size + size)
             cls.ave_position_size += size
@@ -179,7 +195,29 @@ class Account:
     @classmethod
     def __check_order_cancellation(cls):
         with cls.lock:
-            for i,status in enumerate(cls.order_status):
-                if status == 'cancelling':
-                    print('')
+            orders = cls.get_orders()
+            oids = orders['order_id']
+            ostatus = orders['order_status']
+            for i,oid in enumerate(oids):
+                if ostatus[i] == 'cancelling':
+                    res = Trade.Trade.get_order_status(oid)
+                    if res == None:
+                        with cls.lock:
+                            cls.order_status[i] = 'cancelled'
+                            cls.order_log[oid] = 'cancelled'
+                        cls.__remove_order(i)
 
+    @classmethod
+    def __check_order_activation(cls):
+        with cls.lock:
+            orders = cls.get_orders()
+            oids = orders['order_id']
+            ostatus = orders['order_status']
+        for i, oid in enumerate(oids):
+            if ostatus[i] == 'ordering':
+                status = Trade.Trade.get_order_status(oid)
+                if status != None:
+                    if status['child_order_state'] == 'ACTIVE':
+                        with cls.lock:
+                            cls.order_status[i] = 'ridden'
+                            cls.order_log[oid] = 'ridden'

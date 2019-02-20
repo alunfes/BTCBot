@@ -10,6 +10,8 @@ import time
 class Bot:
     @classmethod
     def initialize(cls):
+        Account.initialize()
+        Trade.initialize()
         cls.pt_order = False
         cls.lc_order = False
         cls.entry_p = 0
@@ -17,12 +19,32 @@ class Bot:
         cls.pt_id = ''
         cls.lc_id = ''
 
+
+    @classmethod
+    def cancel_and_wait_completion(cls, oids):
+        res = []
+        if len(oids) >0:
+            Trade.cancel_all_orders()
+            for oid in oids:
+                Trade.cancel_order(oid)
+            while True:
+                flg = True
+                for oid in oids:
+                    status =
+                    if Trade.get_order_status(oid) == 'executed'
+                        flg = False
+                    if Account.get_order_status(oid) == 'executed':
+                        res.append(oid)
+                if flg:
+                    break
+                else:
+                    time.sleep(1)
+
+
     @classmethod
     def kairi_trade(cls, kairi_kijun, pt, lc):
         md = MarketData('lightning_executions_','FX_BTC_JPY')
-        Account.initialize()
         Account.start()
-        Trade.initialize()
         IndexData.start()
 
         cls.initialize()
@@ -32,8 +54,9 @@ class Bot:
                 kairi = 1
             elif IndexData.get_ma_kairi() <= 1 - kairi_kijun:
                 kairi = -1
-            
 
+    @classmethod
+    def pt_lc_
 
 
     @classmethod
