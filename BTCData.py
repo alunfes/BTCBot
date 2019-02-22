@@ -5,8 +5,7 @@ import IndexData
 import copy
 import time
 
-
-
+#[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
 class BTCData:
     @classmethod
     def initialize(cls):
@@ -46,6 +45,11 @@ class BTCData:
     def get_latest_exes_for_db(cls):
         with cls.lock_db:
             return cls.exes_for_db[len(cls.exes_for_db)-1]
+
+    @classmethod
+    def get_current_price(cls):
+        with cls.lock_db:
+            return cls.exes_for_db[len(cls.exes_for_db) - 1]['price']
 
     @classmethod
     def dt_converter(cls, dt):

@@ -1,13 +1,31 @@
 from SystemFlg import SystemFlg
 from MarketData import MarketData
+from BTCData import BTCData
 from Account import Account
 from Trade import Trade
 from IndexData import IndexData
 import threading
 import time
+import copy
 
 
 class Bot:
+    @classmethod
+    def pt_lc(cls, pt_side, pt_price, lc_price, size):
+        def check_lc(side, lc_price) -> bool:
+            price = BTCData.get_current_price()
+            if side =='buy' and price <= lc_price:
+                return True
+            elif side =='sell' and price >= lc_price:
+                return True
+            else:
+                return False
+
+        remaining_size = copy.deepcopy(size)
+        while True:
+            if BTCData.get_current_price()
+            Trade.order(pt_side, pt_price, remaining_size, 10)
+
     @classmethod
     def initialize(cls):
         Account.initialize()
@@ -18,27 +36,6 @@ class Bot:
         cls.order_id = ''
         cls.pt_id = ''
         cls.lc_id = ''
-
-
-    @classmethod
-    def cancel_and_wait_completion(cls, oids):
-        res = []
-        if len(oids) >0:
-            Trade.cancel_all_orders()
-            for oid in oids:
-                Trade.cancel_order(oid)
-            while True:
-                flg = True
-                for oid in oids:
-                    status =
-                    if Trade.get_order_status(oid) == 'executed'
-                        flg = False
-                    if Account.get_order_status(oid) == 'executed':
-                        res.append(oid)
-                if flg:
-                    break
-                else:
-                    time.sleep(1)
 
 
     @classmethod
@@ -55,21 +52,6 @@ class Bot:
             elif IndexData.get_ma_kairi() <= 1 - kairi_kijun:
                 kairi = -1
 
-    @classmethod
-    def pt_lc_
-
-
-    @classmethod
-    def order_and_cancel(cls):
-        Trade.initialize()
-        id = Trade.order('buy', 300000, 0.01, 1)
-        print(id)
-        for i in range(10):
-            status = Trade.get_order_status(id)
-            if len(str(status)) > 10:
-                break
-            time.sleep(0.3)
-        Trade.cancel_order(id)
 
     @classmethod
     def get_orders(cls):
