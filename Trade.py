@@ -31,6 +31,7 @@ class Trade:
 
     @classmethod
     def order(cls, side, price, size, expire_m) -> str: #min size is 0.01
+        cls.num_private_access += 1
         order_id = cls.bf.create_order(
             symbol='BTC/JPY',
             type='limit',
@@ -53,6 +54,7 @@ class Trade:
     '''
     @classmethod
     def get_order_status(cls, id) -> []:
+        cls.num_private_access += 1
         res = []
         try:
             res = cls.bf.private_get_getchildorders(params={'product_code': 'FX_BTC_JPY', 'child_order_acceptance_id': id})
@@ -125,6 +127,7 @@ class Trade:
     '''
     @classmethod
     def get_orders(cls):
+        cls.num_private_access += 1
         orders = cls.bf.fetch_open_orders(symbol='BTC/JPY', params={"product_code": "FX_BTC_JPY"})
         return orders
 
@@ -143,15 +146,29 @@ class Trade:
     '''
     @classmethod
     def get_positions(cls): #None
+        cls.num_private_access += 1
         positions = cls.bf.private_get_getpositions( params = { "product_code" : "FX_BTC_JPY" })
         return positions
 
     @classmethod
     def cancel_order(cls, order_id):
+        cls.num_private_access += 1
         try:
             res = cls.bf.cancel_order(id=order_id, symbol='BTC/JPY', params={"product_code": "FX_BTC_JPY"})
         except Exception as e:
             print(e)
+
+
+    @classmethod
+    def get_current_asset(cls):
+        cls.num_private_access += 1
+        try:
+            res = cls.bf.fetch_balance()
+        except Exception as e:
+            print('error i get_current_asset ' + e)
+        finally:
+            return res['total']['BTC'] * cls.get_opt_price() + res['total']['JPY']
+
 
     @classmethod
     def cancel_all_orders(cls):
@@ -160,21 +177,25 @@ class Trade:
             cls.cancel_order(o['id'])
 
     @classmethod
-    def price_tracing_order(cls, side, size):
+    def price_tracing_order(cls, side, size) -> float:
         print('started price tracing order')
         remaining_size = size
         ave_exec_price = 0
         while remaining_size > 0:
             price = cls.get_opt_price()
-            order_id = cls.order(side, price, remaining_size, 100)
-            while abs(price - cls.get_opt_price()) <= 300:
+            order_id = cls.order_wait_till_boarding(side, price, remaining_size, 100)['child_order_acceptance_id']
+            while abs(price - cls.get_opt_price()) <= 300: #loop when current order price is close to opt price
                 status = cls.get_order_status(order_id)
                 if len(status) > 0:
                     remaining_size -= status[0]['executed_size']
+                    print('executed @' + str(status[0]['average_price']) + ' x ' + str(status[0]['executed_size']))
+                    if remaining_size == 0:
+                        return ave_exec_price
                 time.sleep(1)
-            status = cls.cancel_and_wait_completion(order_id)
+            status = cls.cancel_and_wait_completion(order_id) #when order price is far from opt price
             if status != None:
                 remaining_size -= status[0]['executed_size']
+                print('executed @' + str(status[0]['average_price']) + ' x ' + str(status[0]['executed_size']))
         print('price tracing order has been completed')
         return ave_exec_price
 
@@ -185,6 +206,7 @@ class Trade:
     '''
     @classmethod
     def get_order_book(cls):
+        cls.num_private_access += 1
         return cls.bf.fetch_order_book(symbol='BTC/JPY', params={"product_code": "FX_BTC_JPY"})
 
     @classmethod
@@ -239,11 +261,11 @@ class Trade:
 
     @classmethod
     def cancel_and_wait_completion(cls, oid) -> dict:
-        Trade.cancel_order(oid)
+        cls.cancel_order(oid)
         print('waiting cancell order '+oid)
         while True: #loop for check cancel completion or execution
             flg = True
-            status = Trade.get_order_status(oid)
+            status = cls.get_order_status(oid)
             if len(status) > 0:
                 if status[0]['child_order_state'] == 'COMPLETED':
                     print('order has been executed')
@@ -260,6 +282,7 @@ class Trade:
             status = cls.get_order_status(oid)
             if len(status) > 0:
                 if status[0]['child_order_state'] == 'ACTIVE' or status[0]['child_order_state'] == 'COMPLETED':
+                    print('confirmed the order has been boarded')
                     return status[0]
             time.sleep(1)
 
@@ -268,6 +291,7 @@ class Trade:
 
 if __name__ == '__main__':
     Trade.initialize()
-    for i in range(10):
-        print(Trade.get_opt_price())
-        time.sleep(1)
+    s = Trade.order_wait_till_boarding('sell',300000,0.01,1)
+    Trade.cancel_order(s['child_order_acceptance_id'])
+    print(s)
+    #Trade.price_tracing_order('buy', 0.0)

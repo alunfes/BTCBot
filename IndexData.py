@@ -47,15 +47,9 @@ class IndexData:
             else:
                 time.sleep(0.5)
 
-        pre_num = 0
-        num = 0
-        data = BTCData.BTCData.get_exes_for_db()['price']
-        sum = data.loc[len(data) - cls.term - 1 : len(data) -1].sum()
-        pre_num = len(data)
         while SystemFlg.get_system_flg(): #loop for calc of ma and kairi
-            sum = sum - data.loc[pre_num-cls.term-1 : len(data)-cls.term-1].sum() + data.loc[pre_num-1 : len(data)-1].sum()
-            pre_num = len(data)
+            data = BTCData.BTCData.get_exes_for_db()['price']
+            sum = data.loc[len(data) - cls.term : len(data)].sum()
             ma = float(sum) / float(cls.term)
             cls.set_ma(ma)
-            cls.set_ma_kairi(data.iloc[len(data) - 1] / ma)
-            data = BTCData.BTCData.get_exes_for_db()['price']
+            cls.set_ma_kairi(data[len(data)-1] / ma)

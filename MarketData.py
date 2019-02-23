@@ -6,6 +6,7 @@ import json
 from BTCData import BTCData
 import pandas as pd
 import asyncio
+from SystemFlg import SystemFlg
 
 
 class MarketData:
@@ -51,6 +52,8 @@ class MarketData:
                 BTCData.add_execution_data(self.ticker) #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
         elif self.channel == 'lightning_ticker_':
             print(message['message']['ltp'])
+        if SystemFlg.get_system_flg() == False:
+            self.disconnect()
 
     def on_error(self, ws, error):
         print('error')
@@ -73,6 +76,7 @@ class MarketData:
 
 
 if __name__ == '__main__':
+    SystemFlg.initialize()
     md = MarketData('lightning_executions_','FX_BTC_JPY')
     #md = MarketData('lightning_ticker_', 'FX_BTC_JPY')
     num_failed = 0

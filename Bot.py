@@ -11,7 +11,7 @@ import copy
 
 class Bot:
     @classmethod
-    def pt_lc(cls, pt_side, pt_price, lc_price, size):
+    def pt_lc_till_execution(cls, pt_side, pt_price, lc_price, size):
         def check_lc(side, lc_price) -> bool:
             price = BTCData.get_current_price()
             if side =='buy' and price <= lc_price:
@@ -22,28 +22,52 @@ class Bot:
                 return False
 
         remaining_size = copy.deepcopy(size)
+        side = 'buy' if pt_side == 'sell' else 'sell'
+        oid = None
         while True:
-            if BTCData.get_current_price()
-            Trade.order(pt_side, pt_price, remaining_size, 10)
+            if check_lc(side, lc_price): #lc
+                print('lc has been started, ' + pt_side + ':' + str(lc_price) + ' x ' + str(remaining_size))
+                lc_price = Trade.price_tracing_order(side, remaining_size)
+                print('lc has been completed')
+                Trade.cancel_all_orders()
+            else:
+                if oid is None: #pt order
+                    oid = Trade.order(pt_side, pt_price, remaining_size, 100)
+                    print('placed pt order, ' + pt_side + ':' + str(pt_price) + ' x ' + str(remaining_size))
+            time.sleep(1)
+
+    @classmethod
+    def test_check_data(cls):
+        cls.initialize()
+        i = 0
+        while True:
+            p = BTCData.get_current_price()
+            ma = IndexData.get_ma()
+            kairi = IndexData.get_ma_kairi()
+            print('i={}, price={}, ma={}, kairi={}'.format(i,p,ma,kairi))
+            i += 1
+            time.sleep(0.1)
+
 
     @classmethod
     def initialize(cls):
-        Account.initialize()
+        SystemFlg.initialize()
+        #Account.initialize()
         Trade.initialize()
+        md = MarketData('lightning_executions_', 'FX_BTC_JPY')
+        #Account.start()
         cls.pt_order = False
         cls.lc_order = False
         cls.entry_p = 0
         cls.order_id = ''
         cls.pt_id = ''
         cls.lc_id = ''
+        print('bot initialized')
+        time.sleep(5)
 
 
     @classmethod
     def kairi_trade(cls, kairi_kijun, pt, lc):
-        md = MarketData('lightning_executions_','FX_BTC_JPY')
-        Account.start()
-        IndexData.start()
-
         cls.initialize()
         while SystemFlg.get_system_flg():
             kairi = 0
@@ -105,7 +129,7 @@ class Bot:
 
 
 if __name__ == '__main__':
-    Bot.order_and_get_open()
+    Bot.test_check_data()
     #Bot.get_book()
     #Bot.get_position()
     #Bot.get_orders()

@@ -92,8 +92,8 @@ class Account:
 
 
     @classmethod
-    def start(cls, ccxt_bf):
-        cls.initialize(ccxt_bf)
+    def start(cls):
+        cls.initialize()
         th = threading.Thread(target = cls.__main_loop)
         th2 = threading.Thread(target=cls.__check_order_loop())
         th.start()

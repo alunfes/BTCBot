@@ -21,7 +21,8 @@ class BTCData:
         df['exec_date'] = df['exec_date'].map(cls.dt_converter)
         with cls.lock_ac:
             cls.exes_for_account = pd.concat([cls.exes_for_account, df], axis=0, ignore_index=True)
-            print(cls.exes_for_account)
+            #print(cls.exes_for_account)
+            #print(len(cls.exes_for_account))
         with cls.lock_db:
             cls.exes_for_db = pd.concat([cls.exes_for_account, df], axis=0, ignore_index=True)
 
@@ -31,7 +32,6 @@ class BTCData:
             res = copy.deepcopy(cls.exes_for_account)
             cls.exes_for_account =pd.DataFrame()
             return res
-
 
     @classmethod
     def get_exes_for_db(cls):
@@ -44,12 +44,19 @@ class BTCData:
     @classmethod
     def get_latest_exes_for_db(cls):
         with cls.lock_db:
-            return cls.exes_for_db[len(cls.exes_for_db)-1]
+            if len(cls.exes_for_db) > 0:
+                return cls.exes_for_db[len(cls.exes_for_db)-1:len(cls.exes_for_db)]
+            else:
+                return None
 
     @classmethod
     def get_current_price(cls):
         with cls.lock_db:
-            return cls.exes_for_db[len(cls.exes_for_db) - 1]['price']
+            if len(cls.exes_for_db) > 0:
+                p = cls.exes_for_db['price']
+                return p[len(p)-1]
+            else:
+                return None
 
     @classmethod
     def dt_converter(cls, dt):
