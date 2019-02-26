@@ -6,7 +6,7 @@ from SystemFlg import SystemFlg
 
 class IndexData:
     @classmethod
-    def __initialize(cls, term):
+    def __initialize(cls, term): #term is secconds
         cls.lock = threading.Lock()
         cls.num = 0
         cls.ma = 0
@@ -40,9 +40,10 @@ class IndexData:
     @classmethod
     def main_loop(cls):
         flg = True
+
         while flg: #loop for waiting enough num of tick data
             data = BTCData.BTCData.get_exes_for_db()
-            if len(data) > cls.term:
+            if (data['exec_date'][len(data['exec_date'])] - data['exec_date'][0]).seconds >= cls.term:
                 flg = False
             else:
                 time.sleep(0.5)

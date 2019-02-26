@@ -11,6 +11,10 @@ import copy
 
 class Bot:
     @classmethod
+    def do_kairi_contrian_trade(cls):
+
+
+    @classmethod
     def pt_lc_till_execution(cls, pt_side, pt_price, lc_price, size):
         def check_lc(side, lc_price) -> bool:
             price = BTCData.get_current_price()
