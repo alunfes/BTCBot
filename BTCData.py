@@ -14,47 +14,40 @@ class BTCData:
         cls.lock_db = threading.Lock()
         cls.exes_for_db = pd.DataFrame()
         cls.minutes_data = pd.DataFrame()
-        cls.minutes_data.columns = ['dt', 'open', 'high', 'low', 'close', 'size']
         cls.lock_minutes_data = threading.Lock()
-        cls.current_dt = None
         cls.next_dt = None
-        cls.open = 0
-        cls.high = 0
-        cls.low = 0
-        cls.close = 0
-        cls.size = 0
-        IndexData.IndexData.start(500)
+        cls.minutes_tick = pd.DataFrame()
+        #IndexData.IndexData.start(3)
 
     @classmethod
-    def add_execution_data(cls, data):
+    def add_execution_data(cls, data): #1分間約定ない場合の対応検討
         df = pd.DataFrame.from_dict(data)
         df['exec_date'] = df['exec_date'].map(cls.dt_converter)
+        '''
         with cls.lock_minutes_data:
-            if cls.current_dt == None:
+            if cls.next_dt == None:
                 for i,d in enumerate(df['exec_date']):
                     if d.second == 0:
-                        cls.current_dt = d
-                        cls.next_dt =cls.current_dt + datetime.timedelta(minutes=1)
-                        cls.open = df['price'][i]
-                        print('current_dt has been defined, '+cls.current_dt)
+                        cls.next_dt = d + timedelta(minutes=1)
+                        cls.minutes_tick = df.iloc[i:i+1]
+                        print('current_dt has been defined, '+str(cls.next_dt))
             else:
                 for i, d in enumerate(df['exec_date']):
                     if d >= cls.next_dt:
-                        cls.close = df['price'][i]
-                        cls.high = max(cls.high, df['price'][i])
-                        cls.low = min(cls.low, df['price'][i])
-                        cls.next_dt = cls.next_dt + datetime.timedelta(minutes=1)
-                        cls.size += df['size'][i]
-                        pd.DataFrame()
-                        cls.minutes_data = pd.concat(cls.minutes_data, )
+                        cls.next_dt = cls.next_dt + timedelta(minutes=1)
+                        se = pd.Series([d, cls.minutes_tick['price'][0], cls.minutes_tick['price'].max(), cls.minutes_tick['price'].min(),
+                                        cls.minutes_tick['price'][len(cls.minutes_tick['price'])], cls.minutes_tick['size'].sum()])
+                        cls.minutes_tick = pd.DataFrame()
+                        cls.minutes_data.columns = ['dt','open','high','low','close']
+                        d = cls.minutes_data.iloc[len(cls.minutes_data)-1:len(cls.minutes_data)]
+                        #print('dt={}, open={}, high={}, low={}, close={}, size={}'.format(d, ))
+                        print(cls.minutes_data[len(cls.minutes_data)-1:len(cls.minutes_data)])
                     else:
-                        cls.size += df['size'][i]
-                        cls.high = max(cls.high, df['price'][i])
-                        cls.low = min(cls.low, df['price'][i])
-
-
+                        cls.minutes_tick = pd.concat([cls.minutes_tick, df.iloc[i:i+1]], axis=1, ignore_index=True)
+        '''
         with cls.lock_ac:
             cls.exes_for_account = pd.concat([cls.exes_for_account, df], axis=0, ignore_index=True)
+            print(cls.exes_for_account[len(cls.exes_for_account)-1:len(cls.exes_for_account)])
             #print(cls.exes_for_account)
             #print(len(cls.exes_for_account))
         with cls.lock_db:

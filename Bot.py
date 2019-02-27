@@ -12,6 +12,7 @@ import copy
 class Bot:
     @classmethod
     def do_kairi_contrian_trade(cls):
+        print('d')
 
 
     @classmethod
