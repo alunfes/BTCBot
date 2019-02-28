@@ -4,11 +4,21 @@ from datetime import datetime, timedelta
 import IndexData
 import copy
 import time
+import SystemFlg
+
 
 #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
 class BTCData:
     @classmethod
     def initialize(cls):
+        cls.exes_list = []
+        cls.exes_list_lock = threading.Lock()
+        cls.open =0
+        cls.high = 0
+        cls.low = 99999999
+        cls.size = 0
+        cls.minutes_data = pd.DataFrame()
+
         cls.lock_ac = threading.Lock()
         cls.exes_for_account = pd.DataFrame()
         cls.lock_db = threading.Lock()
@@ -17,7 +27,38 @@ class BTCData:
         cls.lock_minutes_data = threading.Lock()
         cls.next_dt = None
         cls.minutes_tick = pd.DataFrame()
+        cls.__start()
         #IndexData.IndexData.start(3)
+
+    @classmethod
+    def __start(cls):
+        th = threading.Thread(target=cls.minutes_data_converter)
+        th.start()
+
+    @classmethod
+    def add_execution_data2(cls, data):
+        with cls.exes_list_lock:
+            for d in data:
+                cls.exes_list.append(d)
+                cls.high = max(cls.high, d['price'])
+                cls.low = min(cls.low, d['price'])
+                cls.size += d['size']
+
+    @classmethod
+    def minutes_data_converter(cls):
+        while SystemFlg.SystemFlg.get_system_flg():
+            if datetime.now().second == 0 and len(cls.exes_list) > 0:
+                with cls.exes_list_lock:
+                    cls.minutes_data = pd.concat([cls.minutes_data, pd.Series(datetime.now(), cls.open, cls.high, cls.low, cls.exes_list[len(cls.exes_list)-1]['price'], cls.size)],axis=1)
+                    cls.minutes_data.columns = ['dt','open','high','low','close','size']
+                    print(cls.minutes_data)
+                    cls.open = 0
+                    cls.high = 0
+                    cls.low = 99999999
+                    cls.close = 0
+                    cls.size = 0
+                    cls.exes_list = []
+            time.sleep(0.5)
 
     @classmethod
     def add_execution_data(cls, data): #1分間約定ない場合の対応検討
@@ -48,8 +89,6 @@ class BTCData:
         with cls.lock_ac:
             cls.exes_for_account = pd.concat([cls.exes_for_account, df], axis=0, ignore_index=True)
             print(cls.exes_for_account[len(cls.exes_for_account)-1:len(cls.exes_for_account)])
-            #print(cls.exes_for_account)
-            #print(len(cls.exes_for_account))
         with cls.lock_db:
             cls.exes_for_db = pd.concat([cls.exes_for_account, df], axis=0, ignore_index=True)
 

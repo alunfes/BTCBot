@@ -48,10 +48,10 @@ class MarketData:
         self.ticker = message['message']
         if self.channel == 'lightning_executions_':
             if self.ticker is not None:
-                #print(str(self.ticker[0]['price']) +' - ' + str(datetime.datetime.now()))
-                BTCData.add_execution_data(self.ticker) #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
+                #print(self.ticker)
+                BTCData.add_execution_data2(self.ticker) #[{'id': 821682156, 'side': 'SELL', 'price': 395067.0, 'size': 0.015, 'exec_date': '2019-02-16T13:47:51.0022592Z', 'buy_child_order_acceptance_id': 'JRF20190216-134750-185055', 'sell_child_order_acceptance_id': 'JRF20190216-134748-681261'}
         elif self.channel == 'lightning_ticker_':
-            print(message['message']['ltp'])
+            print(message['message'])
         if SystemFlg.get_system_flg() == False:
             self.disconnect()
 
