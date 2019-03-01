@@ -40,17 +40,22 @@ class IndexData:
     @classmethod
     def main_loop(cls):
         flg = True
-
         while flg: #loop for waiting enough num of tick data
-            data = BTCData.BTCData.get_exes_for_db()
+            data = BTCData.BTCData.get_all_minutes_data()
             if len(data) >= cls.term:
                 flg = False
             else:
                 time.sleep(1)
 
+        num = 0
         while SystemFlg.get_system_flg(): #loop for calc of ma and kairi
-            data = BTCData.BTCData.get_exes_for_db()['price']
-            sum = data.loc[len(data) - cls.term : len(data)].sum()
-            ma = float(sum) / float(cls.term)
-            cls.set_ma(ma)
-            cls.set_ma_kairi(data[len(data)-1] / ma)
+            close = BTCData.BTCData.get_all_minutes_data()['close']
+            if len(close) > num:
+                num =len(close)
+                sum = close.iloc[len(close) - cls.term : len(close)].sum()
+                ma = float(sum) / float(cls.term)
+                cls.set_ma(ma)
+                cls.set_ma_kairi(close[len(close)-1] / ma)
+                print('ma={}, ma_kairi={}'.format(cls.get_ma(),cls.get_ma_kairi()))
+            else:
+                time.sleep(1)

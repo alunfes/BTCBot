@@ -11,8 +11,72 @@ import copy
 
 class Bot:
     @classmethod
-    def do_kairi_contrian_trade(cls):
-        print('d')
+    def kairi_contrian_trade(cls, kairi_kijun):
+        def check_kairi(kairi_kijun):
+            if IndexData.get_ma_kairi() -1 >= kairi_kijun:
+                return 'sell'
+            elif 1 - IndexData.get_ma_kairi() <= kairi_kijun:
+                return 'buy'
+            else:
+                return 'no'
+
+        print('bot kairi_contrian_trade has been started')
+        Trade.cancel_all_orders()
+        time.sleep(3)
+        while SystemFlg.get_system_flg():
+            #check 1m kairi and entry if higher than kairi_kijun
+            judge_side = check_kairi(kairi_kijun)
+            if judge_side == 'sell' or judge_side == 'buy':
+                cls.order_and_pt_lc(judge_side, BTCData.get_current_price(), 0.11, 1)
+            posi = Trade.get_positions()
+            if len(posi) > 0:
+                print('unknown position is detected!')
+                Trade.price_tracing_order('buy' if posi[0]['side'] == 'BUY' else 'sell', posi[0]['size'])
+            time.sleep(3)
+
+    @classmethod
+    def order_and_pt_lc(cls, side, price, size, pt, lc, ptlc_trigger_width=50):
+        print('order and pt lc started for '+side+' - '+str(price)+' x '+str(size)+'pt='+str(pt)+', lc='+str(lc))
+        pt_price = price + pt if side =='buy' else price - pt
+        lc_price = price - lc if side =='buy' else price + lc
+        opposit_side = 'buy' if side =='sell' else 'sell'
+        pt_id = ''
+        #entry order
+        order_id = Trade.order_wait_till_boarding(side, price, size, 100)
+        time.sleep(3)
+        ptlc = 'no'
+        while True:
+            #monitor pt lc price diff from current price, and do pt or lc when diff below ptlc_trigger
+            order = Trade.get_order(order_id)
+            if pt_id != '':
+                pt_order = Trade.get_order(pt_id)
+            if order[0]['info']['child_order_state'] != 'COMPLETED':
+                ptlc = cls.__check_pt_lc(side, price, size, pt, lc, ptlc_trigger_width)
+            else:
+                ptlc = 'no'
+            if ptlc =='pt' and order[0]['filled'] > 0:
+                pt_id = Trade.order(opposit_side, pt_price, order[0]['filled'], 100)
+                if order[0]['info']['child_order_state'] != 'COMPLETED':
+                    Trade.cancel_and_wait_completion(order_id)
+                print('lc started')
+                Trade.price_tracing_order(opposit_side, order[0]['filled'])
+                break
+            elif pt_order[0]['info']['child_order_state'] == 'COMPLETED':
+                print('pt completed at ' +str(pt_order[0]['info']['average_price']) + ' x '+str(pt_order['size']))
+                break
+            time.sleep(1)
+        Trade.cancel_all_orders()
+
+    @classmethod
+    def __check_pt_lc(cls,side, entry_price, pt, lc, ptlc_trigger_width=50):
+        pt_price = entry_price + pt if side == 'buy' else entry_price - pt
+        lc_price = entry_price - lc if side == 'buy' else entry_price + lc
+        if abs(BTCData.get_current_price() - pt_price) <= ptlc_trigger_width:
+            return 'pt'
+        elif abs(BTCData.get_current_price() - lc_price) <= ptlc_trigger_width:
+            return 'lc'
+        else:
+            return 'no'
 
 
     @classmethod

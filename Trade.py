@@ -132,6 +132,44 @@ class Trade:
         return orders
 
     '''
+    [{'id': 'JRF20190301-150253-171485',
+  'info': {'id': 0,
+   'child_order_id': 'JFX20190301-150253-315476F',
+   'product_code': 'FX_BTC_JPY',
+   'side': 'BUY',
+   'child_order_type': 'LIMIT',
+   'price': 300000.0,
+   'average_price': 0.0,
+   'size': 0.01,
+   'child_order_state': 'ACTIVE',
+   'expire_date': '2019-03-01T15:03:53',
+   'child_order_date': '2019-03-01T15:02:53',
+   'child_order_acceptance_id': 'JRF20190301-150253-171485',
+   'outstanding_size': 0.01,
+   'cancel_size': 0.0,
+   'executed_size': 0.0,
+   'total_commission': 0.0},
+  'timestamp': 1551452573000,
+  'datetime': '2019-03-01T15:02:53.000Z',
+  'lastTradeTimestamp': None,
+  'status': 'open',
+  'symbol': 'BTC/JPY',
+  'type': 'limit',
+  'side': 'buy',
+  'price': 300000.0,
+  'cost': 0.0,
+  'amount': 0.01,
+  'filled': 0.0,
+  'remaining': 0.01,
+  'fee': {'cost': 0.0, 'currency': None, 'rate': None}}]
+    '''
+    @classmethod
+    def get_order(cls, order_id):
+        cls.num_private_access += 1
+        order = cls.bf.fetch_open_orders(symbol='BTC/JPY', params={"product_code": "FX_BTC_JPY", 'child_order_acceptance_id': order_id})
+        return order
+
+    '''
     [{'product_code': 'FX_BTC_JPY',
     'side': 'BUY',
     'price': 434500.0,

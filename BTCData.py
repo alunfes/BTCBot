@@ -13,7 +13,6 @@ class BTCData:
     def initialize(cls):
         cls.exes_list = []
         cls.exes_list_lock = threading.Lock()
-        cls.open =0
         cls.high = 0
         cls.low = 99999999
         cls.size = 0
@@ -28,7 +27,7 @@ class BTCData:
         cls.next_dt = None
         cls.minutes_tick = pd.DataFrame()
         cls.__start()
-        #IndexData.IndexData.start(3)
+        IndexData.IndexData.start(3)
 
     @classmethod
     def __start(cls):
@@ -49,16 +48,31 @@ class BTCData:
         while SystemFlg.SystemFlg.get_system_flg():
             if datetime.now().second == 0 and len(cls.exes_list) > 0:
                 with cls.exes_list_lock:
-                    cls.minutes_data = pd.concat([cls.minutes_data, pd.Series(datetime.now(), cls.open, cls.high, cls.low, cls.exes_list[len(cls.exes_list)-1]['price'], cls.size)],axis=1)
+                    sef = pd.DataFrame(pd.Series([datetime.now(),cls.exes_list[0]['price'], cls.high,cls.low, cls.exes_list[len(cls.exes_list)-1]['price'],
+                                                  cls.size])).T
+                    cls.exes_list = []
+                    sef.columns = ['dt','open','high','low','close','size']
+                    cls.minutes_data = pd.concat([cls.minutes_data, sef], ignore_index=True, axis=0)
                     cls.minutes_data.columns = ['dt','open','high','low','close','size']
                     print(cls.minutes_data)
-                    cls.open = 0
                     cls.high = 0
                     cls.low = 99999999
-                    cls.close = 0
                     cls.size = 0
-                    cls.exes_list = []
-            time.sleep(0.5)
+                time.sleep(58)
+            time.sleep(0.1)
+
+
+    @classmethod
+    def get_all_minutes_data(cls):
+        with cls.exes_list_lock:
+            res = copy.deepcopy(cls.minutes_data)
+        return res
+
+    @classmethod
+    def get_latest_minutes_data(cls):
+        with cls.exes_list_lock:
+            res = copy.deepcopy(cls.minutes_data)
+        return res[len(res)-1:len(res)]
 
     @classmethod
     def add_execution_data(cls, data): #1分間約定ない場合の対応検討
@@ -117,10 +131,10 @@ class BTCData:
 
     @classmethod
     def get_current_price(cls):
-        with cls.lock_db:
-            if len(cls.exes_for_db) > 0:
-                p = cls.exes_for_db['price']
-                return p[len(p)-1]
+        with cls.exes_list_lock:
+            if len(cls.exes_list) > 0:
+                p = cls.exes_list[len(cls.exes_list)-1]['price']
+                return p
             else:
                 return None
 
