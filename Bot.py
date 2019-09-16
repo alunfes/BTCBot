@@ -1,5 +1,5 @@
 from SystemFlg import SystemFlg
-from MarketData import MarketData
+from WebsocketMaster import WebsocketMaster
 from BTCData import BTCData
 from Account import Account
 from Trade import Trade
@@ -21,6 +21,7 @@ class Bot:
                 return 'no'
 
         print('bot kairi_contrian_trade has been started')
+        asset = Trade.get_current_asset()
         Trade.cancel_all_orders()
         time.sleep(3)
         while SystemFlg.get_system_flg():
@@ -28,6 +29,8 @@ class Bot:
             judge_side = check_kairi(kairi_kijun)
             if judge_side == 'sell' or judge_side == 'buy':
                 cls.order_and_pt_lc(judge_side, BTCData.get_current_price(), 0.11, 1)
+                asset = Trade.get_current_asset()
+                print('current asset = {}'.format(asset))
             posi = Trade.get_positions()
             if len(posi) > 0:
                 print('unknown position is detected!')

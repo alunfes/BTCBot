@@ -1,5 +1,5 @@
 import Bot
-import MarketData
+import WebsocketMaster
 import SystemFlg
 import time
 
@@ -10,12 +10,13 @@ class MasterThread:
     @classmethod
     def start_bot_trade(cls):
         SystemFlg.SystemFlg.initialize()
-        md = MarketData.MarketData('lightning_executions_','FX_BTC_JPY')
+        Bot.Bot.initialize()
+        Bot.Bot.kairi_contrian_trade(0.01)
 
     @classmethod
     def start_market_data(cls):
         SystemFlg.SystemFlg.initialize()
-        md = MarketData.MarketData('lightning_executions_', 'FX_BTC_JPY')
+        md = WebsocketMaster.MarketData('lightning_executions_', 'FX_BTC_JPY')
         while True:
             time.sleep(1)
 
