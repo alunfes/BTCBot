@@ -4,7 +4,7 @@ appnope==0.1.0
 async-timeout==3.0.1
 attrs==18.2.0
 backcall==0.1.0
-bleach==3.1.0
+bleach==3.3.0
 ccxt==1.18.195
 certifi==2018.11.29
 chardet==3.0.4
